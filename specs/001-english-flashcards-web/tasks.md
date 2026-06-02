@@ -128,6 +128,95 @@
 
 ---
 
+## RESEARCH.md 缺口对照（Phase 6 之后）
+
+对照 `RESEARCH.md` 与当前实现，以下能力**尚未完成或仅为占位/Mock**：
+
+| RESEARCH 要求 | 当前状态 |
+|---------------|----------|
+| TTS 朗读 + 语速（0.75/1/1.25）+ R 键重播 | `src/lib/tts.ts` 存在，学习页未接入 |
+| 真实 OCR（百度/阿里云）+ 摄像头拍照 | 有接口骨架，无密钥时降级 mock 词表 |
+| 真实 LLM 兴趣例句/助记（流式输出） | 有接口，失败时模板；无 SSE 流式 |
+| 有道词典 API 标准音标释义 | 未实现 |
+| Tinder 左滑/右滑判定 + 卡片飞出 | 仅按钮判定，无 `drag` 手势 |
+| 快捷键 Space 翻面 | 仅 ←/→/Ctrl+Z |
+| 夜间模式全局生效 | 设置可存主题，页面未切换 `dark` 样式 |
+| 助记法折叠面板、词条可编辑、自动配图 | 助记平铺展示；预览仅删除不可改；无配图 |
+| 生词本按字母/错误次数排序 + 进度条 | 列表展示，无排序器 |
+| 热力图真实数据 + 连续打卡 Streak | 首页/API 为 mock 数据 |
+| 撒花/碎卡动画 + 通关音效 | 简单文案层，无 confetti/音频 |
+| PWA 离线（next-pwa + localForage） | 仅 manifest；存储为 localStorage |
+| 艾宾浩斯长期记忆模式 | 未实现 |
+| 拼写听写模式 | 未实现 |
+| 60 秒限时冲刺 + Combo | 未实现 |
+| 词书云端同步与分享（V3） | 仅本地 LWW mock 同步 |
+
+---
+
+## Phase 7: 学习体验补齐（RESEARCH V1 未完成项）
+
+**Goal**: 补齐 PRD 4.2 闪卡学习模块与 V1.0 Roadmap 中尚未落地的核心交互
+
+**Independent Test**: 学习页可朗读、可滑动判定、可 Space 翻面、深色模式生效，且无 mock 发音占位
+
+### Implementation for Phase 7
+
+- [ ] T048 [P] 在学习页接入 TTS：发音按钮、自动朗读、语速读取于 `src/components/flashcard/flashcard.tsx` 与 `src/lib/tts.ts`
+- [ ] T049 [P] 扩展快捷键：Space 翻面、R 重播发音于 `src/components/study/study-hotkeys.tsx`
+- [ ] T050 实现 Tinder 式滑动判定与卡片飞出动画于 `src/components/flashcard/swipe-zone.tsx` 并接入 `src/components/flashcard/flashcard.tsx`
+- [ ] T051 实现夜间模式全局生效（`html.dark` + 组件样式）于 `src/app/layout.tsx` 与 `src/store/useUserStore.ts`
+- [ ] T052 [P] 实现助记法折叠面板于 `src/components/flashcard/mnemonic-panel.tsx`
+- [ ] T053 [P] 生词本支持按字母/错误次数排序与 0/2 进度条于 `src/components/study/wordbook-list.tsx`
+
+**Checkpoint**: 达到 RESEARCH「V1.0 闪卡+快捷键+夜间模式」可验收水平（除 OCR/AI 真实接入）
+
+---
+
+## Phase 8: 真实数据接入（RESEARCH V2）
+
+**Goal**: 替换 OCR/LLM/热力图等 Mock，完成「拍照导入 + AI 制卡 + 真实看板」
+
+**Independent Test**: 配置密钥后 OCR/补全返回真实内容；热力图来自真实学习记录；庆祝为动画而非纯文案
+
+### Implementation for Phase 8
+
+- [ ] T054 强化 OCR 生产链路：密钥校验、错误提示、空结果处理于 `src/lib/server/ocr.ts` 与 `src/app/api/ocr/route.ts`
+- [ ] T055 [P] 支持摄像头拍照导入（`getUserMedia`）于 `src/components/study/import-preview.tsx`
+- [ ] T056 [P] 接入有道词典 API 作为音标/释义前置于 `src/lib/server/dictionary.ts` 与 `src/app/api/dictionary/route.ts`
+- [ ] T057 优化 LLM 补全：结构化 JSON 校验、兴趣标签例句质量兜底于 `src/lib/server/llm.ts`
+- [ ] T058 实现 AI 流式输出（SSE）于 `src/app/api/cards/enrich/stream/route.ts` 与卡片反面展示
+- [ ] T059 [P] 导入预览支持词条 inline 编辑（单词/释义）于 `src/components/study/import-preview.tsx`
+- [ ] T060 移除首页 mock 热力图，改为读取真实 `DailyActivity` 聚合于 `src/app/(dashboard)/page.tsx` 与 `src/lib/daily-activity.ts`
+- [ ] T061 [P] 实现连续打卡 Streak 统计于 `src/lib/streak.ts` 与看板展示
+- [ ] T062 [P] 升级庆祝反馈：canvas-confetti 全屏撒花 + 掌握时碎卡动效于 `src/components/study/fullscreen-confetti.tsx` 与 `src/components/study/micro-celebration.tsx`
+- [ ] T063 [P] 可选：词条具象配图缓存于 `src/lib/word-image.ts` 与 `src/types/domain.ts`
+
+**Checkpoint**: 达到 RESEARCH「V2.0 体验飞跃」可演示水平
+
+---
+
+## Phase 9: 进阶模式与离线云端（RESEARCH V3 + 非功能需求）
+
+**Goal**: 交付拼写/艾宾浩斯/限时冲刺、PWA 离线、云端词书（按 Roadmap 分期）
+
+**Independent Test**: 各子模式可独立进入并完成一轮；离线可复习；云端同步可配置后多端一致
+
+### Implementation for Phase 9
+
+- [ ] T064 实现拼写听写模式页面与判定逻辑于 `src/app/spelling/page.tsx` 与 `src/lib/spelling-rule.ts`
+- [ ] T065 [P] 实现艾宾浩斯复习调度（1/2/4/7 天）于 `src/lib/ebbinghaus-scheduler.ts` 与 `src/app/review-scheduled/page.tsx`
+- [ ] T066 [P] 实现 60 秒限时冲刺模式（Combo + 倒计时）于 `src/app/time-attack/page.tsx` 与 `src/components/game/time-attack-board.tsx`
+- [ ] T067 将 localStorage 迁移为 localForage（IndexedDB）于 `src/lib/storage.ts`（或新增 `src/lib/db.ts`）
+- [ ] T068 [P] 接入 next-pwa：Service Worker + 离线缓存策略于 `next.config.ts` 与 `public/`
+- [ ] T069 设计并实现远端同步 API（PostgreSQL + Prisma）于 `prisma/schema.prisma` 与 `src/app/api/sync/route.ts`
+- [ ] T070 [P] 实现词书分享（链接或海报）于 `src/app/share/page.tsx` 与 `src/lib/share-link.ts`
+- [ ] T071 [P] 学习页音效（答对/答错/通关）于 `src/lib/sound-effects.ts`
+- [ ] T072 移动端响应式与性能优化（GPU 动画、预加载发音）于 `src/app/globals.css` 与闪卡组件
+
+**Checkpoint**: 达到 RESEARCH「V3.0 进阶学习与游戏化」首期目标
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -136,6 +225,9 @@
 - Foundational（Phase 2）依赖 Phase 1，且阻塞所有用户故事
 - US1/US2/US3（Phase 3-5）均依赖 Phase 2 完成
 - Polish（Phase 6）依赖目标用户故事完成
+- Phase 7 依赖 Phase 6，补齐 V1 交互缺口
+- Phase 8 依赖 Phase 7（TTS/手势稳定后再接真实 API 体验更佳）
+- Phase 9 依赖 Phase 8 数据层真实化，云端同步可并行子任务
 
 ### User Story Dependencies
 
@@ -176,12 +268,16 @@ Task: "T020 实现闪卡组件于 src/components/flashcard/flashcard.tsx"
 1. US1 完成后上线可用学习闭环
 2. 增量交付 US2 强化复习效率
 3. 最后交付 US3 提升留存与打卡行为
+4. Phase 7 交付朗读/滑动/深色模式等「体感」缺口
+5. Phase 8 替换 Mock，完成真实 OCR/AI/热力图
+6. Phase 9 交付进阶模式、PWA 与云端（可按 T064–T072 拆分迭代）
 
 ### Parallel Team Strategy
 
 1. 团队共同完成 Setup + Foundational
 2. 成员 A 主 US1，成员 B 主 US2，成员 C 主 US3
 3. 每个故事完成后做独立验收与合并
+4. Phase 7–9 中标记 `[P]` 的任务可并行（如 T048/T049、T056/T057、T064/T065）
 
 ---
 
