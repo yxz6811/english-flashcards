@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ImportPreview } from "@/components/study/import-preview";
 import { Heatmap } from "@/components/dashboard/heatmap";
 import { useStudyStore } from "@/store/useStudyStore";
@@ -12,8 +13,17 @@ const mockDays = Array.from({ length: 28 }, (_, index) => ({
 }));
 
 export default function DashboardPage() {
+  const router = useRouter();
   const importWords = useStudyStore((state) => state.importWords);
   const tags = useUserStore((state) => state.preferences.interestTags);
+
+  /**
+   * 生成词书成功后跳转学习页。
+   */
+  async function handleImport(words: string[]): Promise<void> {
+    await importWords(words, tags);
+    router.push("/study");
+  }
 
   return (
     <div className="space-y-6">
@@ -34,7 +44,7 @@ export default function DashboardPage() {
           </Link>
         </nav>
       </header>
-      <ImportPreview onConfirm={(words) => importWords(words, tags)} />
+      <ImportPreview onConfirm={handleImport} />
       <Heatmap days={mockDays} />
     </div>
   );

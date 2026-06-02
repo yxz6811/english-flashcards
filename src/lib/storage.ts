@@ -1,4 +1,5 @@
 import type { SyncOperation, UserPreferences, VocabularyItem } from "@/types/domain";
+import { createId } from "@/lib/uuid";
 
 const WORDS_KEY = "ef_words";
 const PREFS_KEY = "ef_prefs";
@@ -30,7 +31,7 @@ export function getDeviceId(): string {
   if (typeof window === "undefined") return "server";
   const existing = window.localStorage.getItem(DEVICE_KEY);
   if (existing) return existing;
-  const created = `dev-${crypto.randomUUID()}`;
+  const created = createId("dev");
   window.localStorage.setItem(DEVICE_KEY, created);
   return created;
 }

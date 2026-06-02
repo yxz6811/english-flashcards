@@ -11,6 +11,7 @@ import {
   saveWords,
   syncWords,
 } from "@/lib/storage";
+import { createId } from "@/lib/uuid";
 import type { ReviewResult, StudySnapshot, SyncOperation, VocabularyItem } from "@/types/domain";
 
 interface StudyStore {
@@ -35,7 +36,7 @@ const seedOps = loadPendingOperations();
 
 function createOp(itemId: string, kind: SyncOperation["kind"], payload: Partial<VocabularyItem>): SyncOperation {
   return {
-    opId: crypto.randomUUID(),
+    opId: createId("op"),
     itemId,
     kind,
     timestamp: Date.now(),
@@ -51,13 +52,26 @@ export const useStudyStore = create<StudyStore>((set, get) => ({
   pendingOps: seedOps,
   syncStatus: "idle",
   importWords: async (entries, interestTags) => {
+    if (entries.length === 0) {
+      throw new Error("请先输入或导入至少一个单词");
+    }
+
     const response = await fetch(withBasePath("/api/cards/enrich"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ words: entries, interestTags }),
     });
-    const data = (await response.json()) as { items: VocabularyItem[] };
-    const words = data.items;
+
+    if (!response.ok) {
+      throw new Error(`词条补全失败（HTTP ${response.status}）`);
+    }
+
+    const data = (await response.json()) as { items?: VocabularyItem[] };
+    const words = data.items ?? [];
+    if (words.length === 0) {
+      throw new Error("未生成有效词条，请检查输入内容");
+    }
+
     const importOps = words.map((item) => createOp(item.id, "import", item));
     const nextOps = [...get().pendingOps, ...importOps];
     saveWords(words);
