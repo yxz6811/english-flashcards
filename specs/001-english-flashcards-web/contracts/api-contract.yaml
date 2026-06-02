@@ -1,0 +1,179 @@
+openapi: 3.0.3
+info:
+  title: English Flashcards BFF API
+  version: 1.0.0
+  description: |
+    英语闪卡复习应用的后端接口契约（BFF层），用于导入、学习状态提交、生词流转与看板数据读取。
+    已与当前实现路径对齐：/ocr, /cards/enrich, /study/submit, /study/undo, /dashboard/heatmap
+servers:
+  - url: /api
+paths:
+  /ocr:
+    post:
+      summary: 从上传图片提取词条
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+              required: [image]
+      responses:
+        "200":
+          description: 识别成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/RawWordItem"
+  /cards/enrich:
+    post:
+      summary: 批量补全词条内容（释义、例句、助记）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                words:
+                  type: array
+                  items:
+                    type: string
+                interestTags:
+                  type: array
+                  items:
+                    type: string
+              required: [words]
+      responses:
+        "200":
+          description: 补全成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/VocabularyItem"
+  /study/submit:
+    post:
+      summary: 提交一次学习判定
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                itemId:
+                  type: string
+                result:
+                  type: string
+                  enum: [known, unknown]
+              required: [itemId, result]
+      responses:
+        "200":
+          description: 判定已记录并返回最新状态
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudySubmitResponse"
+  /study/undo:
+    post:
+      summary: 撤销上一步学习判定
+      responses:
+        "200":
+          description: 撤销成功并返回恢复后的状态
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudySubmitResponse"
+  /dashboard/heatmap:
+    get:
+      summary: 获取学习热力图数据
+      parameters:
+        - in: query
+          name: range
+          schema:
+            type: string
+            enum: [30d, 90d, 180d, 365d]
+      responses:
+        "200":
+          description: 成功返回热力图
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  days:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/DailyActivity"
+components:
+  schemas:
+    RawWordItem:
+      type: object
+      properties:
+        word:
+          type: string
+      required: [word]
+    VocabularyItem:
+      type: object
+      properties:
+        id:
+          type: string
+        word:
+          type: string
+        phonetic:
+          type: string
+        meaningZh:
+          type: string
+        exampleEn:
+          type: string
+        exampleZh:
+          type: string
+        mnemonic:
+          type: string
+        status:
+          type: string
+          enum: [learning, mastered]
+        correctStreak:
+          type: integer
+          minimum: 0
+          maximum: 2
+      required: [id, word, meaningZh, status, correctStreak]
+    StudySubmitResponse:
+      type: object
+      properties:
+        item:
+          $ref: "#/components/schemas/VocabularyItem"
+        todayProgress:
+          type: object
+          properties:
+            reviewedCount:
+              type: integer
+            remainingCount:
+              type: integer
+            completed:
+              type: boolean
+    DailyActivity:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        reviewedCount:
+          type: integer
+        completedDailyGoal:
+          type: boolean
+      required: [date, reviewedCount, completedDailyGoal]

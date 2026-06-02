@@ -1,0 +1,9 @@
+{
+  "name": "英语闪卡复习",
+  "short_name": "闪卡复习",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAFAF9",
+  "theme_color": "#CA8A04",
+  "icons": []
+}
