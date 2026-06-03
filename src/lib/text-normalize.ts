@@ -1,3 +1,5 @@
+import { cleanHeadword } from "@/lib/ocr-vocabulary";
+
 /**
  * 清洗并去重词条。
  */
@@ -6,7 +8,7 @@ export function normalizeWordList(raw: string[]): string[] {
   const result: string[] = [];
 
   raw.forEach((entry) => {
-    const word = entry.trim().replace(/\s+/g, " ");
+    const word = cleanHeadword(entry.trim().replace(/\s+/g, " "));
     if (!word) return;
     const key = word.toLowerCase();
     if (seen.has(key)) return;

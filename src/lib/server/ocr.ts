@@ -1,3 +1,5 @@
+import { extractWordsFromOcrText } from "@/lib/ocr-vocabulary";
+
 interface OcrWord {
   word: string;
 }
@@ -42,12 +44,10 @@ function normalizeMime(mimeType?: string): string {
 }
 
 /**
- * 从文本中提取英文单词。
+ * 从 OCR 文本中提取英文词条（已过滤音标碎片）。
  */
 function extractWords(text: string): OcrWord[] {
-  const tokens = text.match(/[A-Za-z][A-Za-z'-]{1,}/g) ?? [];
-  const uniq = Array.from(new Set(tokens.map((word) => word.toLowerCase())));
-  return uniq.map((word) => ({ word }));
+  return extractWordsFromOcrText(text).map((word) => ({ word }));
 }
 
 /**
@@ -84,11 +84,20 @@ async function callOcrSpace(base64Image: string, mimeType?: string): Promise<{ t
   }
 
   const mime = normalizeMime(mimeType) || detectMimeFromBase64(base64Image);
+
+  // 词汇表是中英混排：默认让 OCR.space 识别中文（chs），中文释义会作为真正的
+  // 中文字符返回并被解析层整段剔除，而不会被纯英文引擎硬塞成 IE / fi 之类的
+  // 拉丁碎片黏在词条尾部。chs/cht/jpn/kor 仅 Engine 1 支持。
+  // 纯英文词表可在 .env.local 设 OCR_SPACE_LANGUAGE=eng 以提升英文字符精度。
+  const language = (process.env.OCR_SPACE_LANGUAGE || "chs").trim() || "chs";
+  const cjkLanguage = /^(chs|cht|jpn|kor)$/i.test(language);
+  const engine = (process.env.OCR_SPACE_ENGINE || (cjkLanguage ? "1" : "2")).trim() || (cjkLanguage ? "1" : "2");
+
   const body = new URLSearchParams({
     base64Image: `data:${mime};base64,${base64Image}`,
-    language: "eng",
+    language,
     isOverlayRequired: "false",
-    OCREngine: "2",
+    OCREngine: engine,
   });
 
   const response = await fetch("https://api.ocr.space/parse/image", {
