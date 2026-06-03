@@ -1,13 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { FlashCard } from "@/components/flashcard/flashcard";
 import { FullscreenConfetti } from "@/components/study/fullscreen-confetti";
 import { MicroCelebration } from "@/components/study/micro-celebration";
 import { StudyHotkeys } from "@/components/study/study-hotkeys";
+import { speak } from "@/lib/tts";
 import { useStudyStore } from "@/store/useStudyStore";
+import { useUserStore } from "@/store/useUserStore";
 
 export default function StudyPage() {
+  const [flipped, setFlipped] = useState(false);
   const currentWord = useStudyStore((state) => state.currentWord);
   const words = useStudyStore((state) => state.words);
   const reviewCurrent = useStudyStore((state) => state.reviewCurrent);
@@ -15,9 +19,14 @@ export default function StudyPage() {
   const syncNow = useStudyStore((state) => state.syncNow);
   const syncStatus = useStudyStore((state) => state.syncStatus);
   const pendingOps = useStudyStore((state) => state.pendingOps.length);
+  const speechRate = useUserStore((state) => state.preferences.speechRate);
   const word = currentWord();
   const masteredCount = words.filter((item) => item.status === "mastered").length;
   const showDailyDone = words.length > 0 && masteredCount === words.length;
+
+  useEffect(() => {
+    setFlipped(false);
+  }, [word?.id]);
 
   return (
     <div className="space-y-6">
@@ -32,7 +41,7 @@ export default function StudyPage() {
           </Link>
         </div>
       </header>
-      <p className="text-sm text-stone-600">
+      <p className="text-sm text-stone-600 dark:text-stone-400">
         同步状态：
         {syncStatus === "idle" && "待机"}
         {syncStatus === "syncing" && "同步中"}
@@ -41,15 +50,24 @@ export default function StudyPage() {
       </p>
       {word ? (
         <>
-          <FlashCard item={word} onKnown={() => reviewCurrent("known")} onUnknown={() => reviewCurrent("unknown")} />
+          <FlashCard
+            item={word}
+            flipped={flipped}
+            onFlipToggle={() => setFlipped((prev) => !prev)}
+            speechRate={speechRate}
+            onKnown={() => reviewCurrent("known")}
+            onUnknown={() => reviewCurrent("unknown")}
+          />
           <MicroCelebration visible={word.correctStreak === 1} />
-          <button className="btn-secondary" onClick={undoReview} type="button">
+          <button className="btn-secondary w-full sm:w-auto" onClick={undoReview} type="button">
             撤销上一步
           </button>
           <StudyHotkeys
             onKnown={() => reviewCurrent("known")}
             onUnknown={() => reviewCurrent("unknown")}
             onUndo={undoReview}
+            onFlip={() => setFlipped((prev) => !prev)}
+            onSpeak={() => speak(word.word, speechRate)}
           />
         </>
       ) : (

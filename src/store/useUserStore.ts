@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { loadPreferences, savePreferences } from "@/lib/storage";
+import { applyTheme } from "@/lib/theme";
 import type { UserPreferences } from "@/types/domain";
 
 interface UserStore {
@@ -16,6 +17,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
   setTheme: (theme) => {
     const preferences = { ...get().preferences, theme };
     savePreferences(preferences);
+    applyTheme(theme);
     set({ preferences });
   },
   setSpeechRate: (speechRate) => {

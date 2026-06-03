@@ -161,12 +161,12 @@
 
 ### Implementation for Phase 7
 
-- [ ] T048 [P] 在学习页接入 TTS：发音按钮、自动朗读、语速读取于 `src/components/flashcard/flashcard.tsx` 与 `src/lib/tts.ts`
-- [ ] T049 [P] 扩展快捷键：Space 翻面、R 重播发音于 `src/components/study/study-hotkeys.tsx`
-- [ ] T050 实现 Tinder 式滑动判定与卡片飞出动画于 `src/components/flashcard/swipe-zone.tsx` 并接入 `src/components/flashcard/flashcard.tsx`
-- [ ] T051 实现夜间模式全局生效（`html.dark` + 组件样式）于 `src/app/layout.tsx` 与 `src/store/useUserStore.ts`
-- [ ] T052 [P] 实现助记法折叠面板于 `src/components/flashcard/mnemonic-panel.tsx`
-- [ ] T053 [P] 生词本支持按字母/错误次数排序与 0/2 进度条于 `src/components/study/wordbook-list.tsx`
+- [X] T048 [P] 在学习页接入 TTS：发音按钮、自动朗读、语速读取于 `src/components/flashcard/flashcard.tsx` 与 `src/lib/tts.ts`
+- [X] T049 [P] 扩展快捷键：Space 翻面、R 重播发音于 `src/components/study/study-hotkeys.tsx`
+- [X] T050 实现 Tinder 式滑动判定与卡片飞出动画于 `src/components/flashcard/swipe-zone.tsx` 并接入 `src/components/flashcard/flashcard.tsx`
+- [X] T051 实现夜间模式全局生效（`html.dark` + 组件样式）于 `src/app/layout.tsx` 与 `src/store/useUserStore.ts`
+- [X] T052 [P] 实现助记法折叠面板于 `src/components/flashcard/mnemonic-panel.tsx`
+- [X] T053 [P] 生词本支持按字母/错误次数排序与 0/2 进度条于 `src/components/study/wordbook-list.tsx`
 
 **Checkpoint**: 达到 RESEARCH「V1.0 闪卡+快捷键+夜间模式」可验收水平（除 OCR/AI 真实接入）
 
