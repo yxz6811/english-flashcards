@@ -15,6 +15,7 @@ tar \
   --exclude='.env.local' \
   -czf - . | ssh -p "$PORT" "$SERVER" "tar -xzf - -C $REMOTE_DIR"
 
+echo ">>> 提示：.env.local 不会随 deploy 上传，请确保服务器 $REMOTE_DIR/.env.local 已配置 OCR_SPACE_API_KEY"
 echo ">>> 远程构建并重启..."
 ssh -p "$PORT" "$SERVER" <<EOF
 set -e

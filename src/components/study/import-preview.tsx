@@ -39,18 +39,30 @@ export function ImportPreview({ onConfirm }: ImportPreviewProps) {
       const response = await fetch(withBasePath("/api/ocr"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64 }),
+        body: JSON.stringify({
+          imageBase64,
+          mimeType: file.type || undefined,
+        }),
       });
+      const data = (await response.json()) as {
+        items?: Array<{ word?: string }>;
+        error?: string;
+        source?: string;
+        provider?: string;
+      };
       if (!response.ok) {
-        throw new Error(`OCR 识别失败（HTTP ${response.status}）`);
+        throw new Error(data.error ?? `OCR 识别失败（HTTP ${response.status}）`);
       }
-      const data = (await response.json()) as { items?: Array<{ word?: string }> };
+      if (data.source === "fallback") {
+        throw new Error("服务端仍在使用演示数据，请配置 OCR 密钥并重启应用");
+      }
       const imported = (data.items ?? []).map((item) => item.word ?? "").filter(Boolean);
       if (imported.length > 0) {
         setRawText((prev) => `${prev}\n${imported.join("\n")}`.trim());
-        setSuccess(`已识别 ${imported.length} 个单词，可继续编辑后生成词书`);
+        const via = data.provider === "ocrspace" ? "OCR.space" : data.provider === "baidu" ? "百度 OCR" : "OCR";
+        setSuccess(`已通过 ${via} 识别 ${imported.length} 个单词，可继续编辑后生成词书`);
       } else {
-        setError("未识别到有效单词，请换一张更清晰的图片或手动粘贴");
+        setError(data.error ?? "未识别到有效单词，请换一张更清晰的图片或手动粘贴");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "OCR 识别失败");
