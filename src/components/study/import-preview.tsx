@@ -59,7 +59,14 @@ export function ImportPreview({ onConfirm }: ImportPreviewProps) {
       const imported = (data.items ?? []).map((item) => item.word ?? "").filter(Boolean);
       if (imported.length > 0) {
         setRawText((prev) => `${prev}\n${imported.join("\n")}`.trim());
-        const via = data.provider === "ocrspace" ? "OCR.space" : data.provider === "baidu" ? "百度 OCR" : "OCR";
+        const via =
+          data.provider === "vision"
+            ? "AI 识图"
+            : data.provider === "ocrspace"
+            ? "OCR.space"
+            : data.provider === "baidu"
+            ? "百度 OCR"
+            : "OCR";
         setSuccess(`已通过 ${via} 识别 ${imported.length} 个单词，可继续编辑后生成词书`);
       } else {
         setError(data.error ?? "未识别到有效单词，请换一张更清晰的图片或手动粘贴");

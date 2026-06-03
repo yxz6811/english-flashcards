@@ -1,4 +1,6 @@
 import { extractWordsFromOcrText } from "@/lib/ocr-vocabulary";
+import { detectMimeFromBase64, normalizeMime } from "./image-mime";
+import { recognizeWordsFromImageVision } from "./vision";
 
 interface OcrWord {
   word: string;
@@ -6,7 +8,7 @@ interface OcrWord {
 
 export interface OcrRecognizeResult {
   items: OcrWord[];
-  provider?: "baidu" | "ocrspace";
+  provider?: "vision" | "baidu" | "ocrspace";
   error?: string;
 }
 
@@ -15,32 +17,6 @@ interface OcrSpaceResponse {
   IsErroredOnProcessing?: boolean;
   ErrorMessage?: string | string[];
   ParsedResults?: Array<{ ParsedText?: string }>;
-}
-
-/**
- * 从 base64 魔数推断图片 MIME。
- */
-function detectMimeFromBase64(base64Image: string): string {
-  try {
-    const head = Buffer.from(base64Image.slice(0, 24), "base64");
-    if (head[0] === 0xff && head[1] === 0xd8) return "image/jpeg";
-    if (head[0] === 0x89 && head[1] === 0x50) return "image/png";
-    if (head[0] === 0x47 && head[1] === 0x49) return "image/gif";
-    if (head[0] === 0x52 && head[1] === 0x49 && head[8] === 0x57) return "image/webp";
-  } catch {
-    /* 忽略解码失败 */
-  }
-  return "image/jpeg";
-}
-
-/**
- * 规范化客户端传入的 MIME。
- */
-function normalizeMime(mimeType?: string): string {
-  if (!mimeType) return "";
-  if (mimeType === "image/jpg") return "image/jpeg";
-  if (mimeType.startsWith("image/")) return mimeType;
-  return "";
 }
 
 /**
@@ -85,11 +61,12 @@ async function callOcrSpace(base64Image: string, mimeType?: string): Promise<{ t
 
   const mime = normalizeMime(mimeType) || detectMimeFromBase64(base64Image);
 
-  // 词汇表是中英混排：默认让 OCR.space 识别中文（chs），中文释义会作为真正的
-  // 中文字符返回并被解析层整段剔除，而不会被纯英文引擎硬塞成 IE / fi 之类的
-  // 拉丁碎片黏在词条尾部。chs/cht/jpn/kor 仅 Engine 1 支持。
-  // 纯英文词表可在 .env.local 设 OCR_SPACE_LANGUAGE=eng 以提升英文字符精度。
-  const language = (process.env.OCR_SPACE_LANGUAGE || "chs").trim() || "chs";
+  // OCR 现在是「多模态识图」的降级兜底。兜底场景下英文可读性（词间空格）最关键：
+  // Engine 1(chs) 虽能识别中文，却容易把 take a message 连成 takeamessage，这种黏连
+  // 正则无法还原；而中文被英文引擎识成的尾部碎片，解析层已能较好清除。
+  // 故默认 eng(Engine 2) 保英文空格；若更在意中文乱码碎片可设 OCR_SPACE_LANGUAGE=chs。
+  // 注意：chs/cht/jpn/kor 仅 Engine 1 支持。
+  const language = (process.env.OCR_SPACE_LANGUAGE || "eng").trim() || "eng";
   const cjkLanguage = /^(chs|cht|jpn|kor)$/i.test(language);
   const engine = (process.env.OCR_SPACE_ENGINE || (cjkLanguage ? "1" : "2")).trim() || (cjkLanguage ? "1" : "2");
 
@@ -188,18 +165,26 @@ async function callBaiduOcr(base64Image: string): Promise<{ text: string; error?
 }
 
 /**
- * OCR 主入口：优先百度，其次 OCR.space。
+ * 识别主入口：优先多模态视觉识图（最准），未配置 / 失败时自动降级到 OCR（百度 → OCR.space）。
  */
 export async function recognizeWordsFromImage(
   base64Image: string,
   mimeType?: string
 ): Promise<OcrRecognizeResult> {
+  // 1) 多模态视觉识图：模型直接理解词汇表结构，正确分词、去音标/中文/页码，无需正则清洗。
+  const vision = await recognizeWordsFromImageVision(base64Image, mimeType);
+  if (vision.items.length > 0) {
+    return { items: vision.items, provider: "vision" };
+  }
+
+  // 2) 百度 OCR
   const baidu = await callBaiduOcr(base64Image);
   if (baidu.text) {
     const items = extractWords(baidu.text);
     if (items.length > 0) return { items, provider: "baidu" };
   }
 
+  // 3) OCR.space
   const ocrSpace = await callOcrSpace(base64Image, mimeType);
   if (ocrSpace.text) {
     const items = extractWords(ocrSpace.text);
@@ -210,18 +195,22 @@ export async function recognizeWordsFromImage(
     };
   }
 
+  const hasVision =
+    isConfiguredApiKey(process.env.VISION_API_KEY) ||
+    isConfiguredApiKey(process.env.DASHSCOPE_API_KEY);
   const hasBaidu = isConfiguredApiKey(process.env.BAIDU_OCR_API_KEY);
   const hasOcrSpace = isConfiguredApiKey(process.env.OCR_SPACE_API_KEY);
 
-  if (!hasBaidu && !hasOcrSpace) {
+  if (!hasVision && !hasBaidu && !hasOcrSpace) {
     return {
       items: [],
-      error: "未配置 OCR：请在 .env.local 设置 OCR_SPACE_API_KEY 或百度 OCR 密钥",
+      error:
+        "未配置识别服务：请在 .env.local 设置 VISION_API_KEY（多模态识图，推荐）或 OCR 密钥",
     };
   }
 
   return {
     items: [],
-    error: ocrSpace.error ?? baidu.error ?? "OCR 识别失败，请稍后重试",
+    error: vision.error || ocrSpace.error || baidu.error || "识别失败，请稍后重试",
   };
 }
